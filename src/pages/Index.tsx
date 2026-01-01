@@ -8,6 +8,7 @@ import { DocumentHistory, type HistoryItem } from "@/components/DocumentHistory"
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { processDocument, type OCRMode, type OCRResult } from "@/services/ocrEngine";
 
 type ProcessingStatus = "idle" | "uploading" | "processing" | "complete" | "error";
 
@@ -18,6 +19,11 @@ const Index = () => {
   const [currentFileName, setCurrentFileName] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState<string>();
+  const [processingStats, setProcessingStats] = useState<{
+    time: number;
+    words: number;
+    chars: number;
+  } | null>(null);
   const { toast } = useToast();
   const { user, signOut } = useAuth();
 
@@ -63,23 +69,22 @@ const Index = () => {
     }
   };
 
-  const simulateOCRProcessing = useCallback(
-    async (file: File) => {
+  const handleOCRProcessing = useCallback(
+    async (file: File, mode: OCRMode) => {
       if (!user) return;
-      
+
       setCurrentFileName(file.name);
       setStatus("uploading");
       setProgress(0);
       setExtractedText("");
       setSelectedHistoryId(undefined);
+      setProcessingStats(null);
 
       // Simulate upload progress
-      for (let i = 0; i <= 40; i += 10) {
-        await new Promise((r) => setTimeout(r, 150));
+      for (let i = 0; i <= 30; i += 10) {
+        await new Promise((r) => setTimeout(r, 100));
         setProgress(i);
       }
-
-      setStatus("processing");
 
       // Create document record
       const { data: docData, error: docError } = await supabase
@@ -105,92 +110,86 @@ const Index = () => {
         return;
       }
 
-      // Simulate processing progress
-      for (let i = 40; i <= 100; i += 15) {
-        await new Promise((r) => setTimeout(r, 300));
-        setProgress(i);
-      }
+      setStatus("processing");
+      setProgress(40);
 
-      // Simulate extracted text (demo mode)
-      const demoText = `Document Analysis Complete
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      try {
+        // Call the real OCR engine
+        const result: OCRResult = await processDocument(file, mode);
 
-Source: ${file.name}
-File Type: ${file.type}
-File Size: ${(file.size / 1024).toFixed(2)} KB
-User: ${user.email}
+        setProgress(90);
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        // Save OCR result to database
+        const { error: ocrError } = await supabase
+          .from("ocr_results")
+          .insert({
+            document_id: docData.id,
+            user_id: user.id,
+            extracted_text: result.extracted_text,
+            word_count: result.word_count,
+            character_count: result.character_count,
+            processing_time_ms: result.processing_time_ms,
+          });
 
-[DEMO MODE - Connect an OCR API for real extraction]
+        if (ocrError) {
+          console.error("Error saving OCR result:", ocrError);
+        }
 
-This is a demonstration of the OCR interface. 
-To enable actual text extraction, connect an 
-external OCR API such as:
+        // Update document status
+        await supabase
+          .from("documents")
+          .update({ status: "completed" })
+          .eq("id", docData.id);
 
-• Google Cloud Vision API
-• AWS Textract
-• Microsoft Azure Computer Vision
-
-The extracted text from your document would 
-appear here with full formatting preserved.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Ready for production deployment.`;
-
-      // Save OCR result
-      const wordCount = demoText.split(/\s+/).filter(Boolean).length;
-      const charCount = demoText.length;
-
-      const { error: ocrError } = await supabase
-        .from("ocr_results")
-        .insert({
-          document_id: docData.id,
-          user_id: user.id,
-          extracted_text: demoText,
-          word_count: wordCount,
-          character_count: charCount,
-          processing_time_ms: 1500,
+        setProgress(100);
+        setExtractedText(result.extracted_text);
+        setProcessingStats({
+          time: result.processing_time_ms,
+          words: result.word_count,
+          chars: result.character_count,
         });
+        setStatus("complete");
 
-      if (ocrError) {
-        console.error("Error saving OCR result:", ocrError);
+        // Add to local history
+        const newItem: HistoryItem = {
+          id: docData.id,
+          fileName: file.name,
+          fileType: file.type,
+          extractedText: result.extracted_text,
+          processedAt: new Date(),
+        };
+        setHistory((prev) => [newItem, ...prev.slice(0, 9)]);
+        setSelectedHistoryId(newItem.id);
+
+        toast({
+          title: "Extraction complete",
+          description: `Extracted ${result.word_count} words in ${(result.processing_time_ms / 1000).toFixed(1)}s`,
+        });
+      } catch (error) {
+        console.error("OCR processing error:", error);
+        
+        // Update document status to failed
+        await supabase
+          .from("documents")
+          .update({ status: "failed" })
+          .eq("id", docData.id);
+
+        setStatus("error");
+        toast({
+          title: "OCR Failed",
+          description: error instanceof Error ? error.message : "Failed to extract text from document.",
+          variant: "destructive",
+        });
       }
-
-      // Update document status
-      await supabase
-        .from("documents")
-        .update({ status: "completed" })
-        .eq("id", docData.id);
-
-      setExtractedText(demoText);
-      setStatus("complete");
-
-      // Add to local history
-      const newItem: HistoryItem = {
-        id: docData.id,
-        fileName: file.name,
-        fileType: file.type,
-        extractedText: demoText,
-        processedAt: new Date(),
-      };
-      setHistory((prev) => [newItem, ...prev.slice(0, 9)]);
-      setSelectedHistoryId(newItem.id);
-
-      toast({
-        title: "Extraction complete",
-        description: `Successfully processed ${file.name}`,
-      });
     },
     [toast, user]
   );
 
   const handleFileSelect = useCallback(
-    (file: File) => {
-      simulateOCRProcessing(file);
+    (file: File, mode: OCRMode) => {
+      handleOCRProcessing(file, mode);
     },
-    [simulateOCRProcessing]
+    [handleOCRProcessing]
   );
 
   const handleHistorySelect = useCallback((item: HistoryItem) => {
@@ -198,37 +197,37 @@ Ready for production deployment.`;
     setCurrentFileName(item.fileName);
     setStatus("complete");
     setSelectedHistoryId(item.id);
+    setProcessingStats(null);
   }, []);
 
-  const handleHistoryDelete = useCallback(async (id: string) => {
-    // Delete from database
-    const { error } = await supabase
-      .from("documents")
-      .delete()
-      .eq("id", id);
+  const handleHistoryDelete = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from("documents").delete().eq("id", id);
 
-    if (error) {
-      console.error("Error deleting document:", error);
+      if (error) {
+        console.error("Error deleting document:", error);
+        toast({
+          title: "Error",
+          description: "Failed to delete document.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setHistory((prev) => prev.filter((item) => item.id !== id));
+      if (selectedHistoryId === id) {
+        setExtractedText("");
+        setStatus("idle");
+        setSelectedHistoryId(undefined);
+      }
+
       toast({
-        title: "Error",
-        description: "Failed to delete document.",
-        variant: "destructive",
+        title: "Deleted",
+        description: "Document removed from history.",
       });
-      return;
-    }
-
-    setHistory((prev) => prev.filter((item) => item.id !== id));
-    if (selectedHistoryId === id) {
-      setExtractedText("");
-      setStatus("idle");
-      setSelectedHistoryId(undefined);
-    }
-    
-    toast({
-      title: "Deleted",
-      description: "Document removed from history.",
-    });
-  }, [selectedHistoryId, toast]);
+    },
+    [selectedHistoryId, toast]
+  );
 
   const handleNewScan = useCallback(() => {
     setStatus("idle");
@@ -236,6 +235,7 @@ Ready for production deployment.`;
     setProgress(0);
     setCurrentFileName("");
     setSelectedHistoryId(undefined);
+    setProcessingStats(null);
   }, []);
 
   const handleSignOut = async () => {
@@ -259,7 +259,7 @@ Ready for production deployment.`;
               <div>
                 <h1 className="text-xl font-semibold text-foreground">VisionOCR</h1>
                 <p className="text-xs text-muted-foreground font-mono">
-                  v1.0.0 • Neural Text Extraction
+                  v1.0.0 • AI-Powered Text Extraction
                 </p>
               </div>
             </div>
@@ -292,16 +292,13 @@ Ready for production deployment.`;
               </h2>
               <p className="text-muted-foreground max-w-xl mx-auto">
                 Upload images or PDFs and let our AI-powered OCR engine extract
-                text with precision. Fast, accurate, and secure.
+                text with precision. Supports printed text, handwriting, and mixed documents.
               </p>
             </div>
 
             {/* Upload or Processing or Results */}
             {status === "idle" && (
-              <UploadZone
-                onFileSelect={handleFileSelect}
-                isProcessing={false}
-              />
+              <UploadZone onFileSelect={handleFileSelect} isProcessing={false} />
             )}
 
             {(status === "uploading" || status === "processing") && (
@@ -310,12 +307,28 @@ Ready for production deployment.`;
               </div>
             )}
 
+            {status === "error" && (
+              <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-8 text-center">
+                <p className="text-destructive font-medium mb-4">
+                  Failed to process document
+                </p>
+                <Button variant="terminal" onClick={handleNewScan}>
+                  Try Again
+                </Button>
+              </div>
+            )}
+
             {status === "complete" && extractedText && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-medium text-foreground">
-                    Results
-                  </h3>
+                  <div>
+                    <h3 className="text-lg font-medium text-foreground">Results</h3>
+                    {processingStats && (
+                      <p className="text-xs text-muted-foreground font-mono">
+                        Processed in {(processingStats.time / 1000).toFixed(1)}s
+                      </p>
+                    )}
+                  </div>
                   <Button
                     variant="terminal"
                     size="sm"
@@ -337,12 +350,12 @@ Ready for production deployment.`;
                   {
                     icon: "⚡",
                     title: "Lightning Fast",
-                    desc: "Process documents in seconds",
+                    desc: "AI-powered processing",
                   },
                   {
-                    icon: "🎯",
-                    title: "High Accuracy",
-                    desc: "AI-powered text recognition",
+                    icon: "✍️",
+                    title: "Handwriting",
+                    desc: "Recognizes written text",
                   },
                   {
                     icon: "🔒",
