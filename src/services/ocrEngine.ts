@@ -32,6 +32,29 @@ export async function fileToBase64(file: File): Promise<string> {
   });
 }
 
+type OcrProcessBody = {
+  imageBase64: string;
+  fileName: string;
+  fileType: string;
+  mode: OCRMode;
+};
+
+async function invokeOcrProcess(body: OcrProcessBody) {
+  // NOTE: Some environments validate Edge Function JWTs differently from Auth access tokens.
+  // Using the project's publishable JWT ensures the request passes function JWT verification.
+  const publishableJwt = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  if (!publishableJwt) {
+    throw new Error("Missing VITE_SUPABASE_PUBLISHABLE_KEY");
+  }
+
+  return supabase.functions.invoke("ocr-process", {
+    body,
+    headers: {
+      Authorization: `Bearer ${publishableJwt}`,
+    },
+  });
+}
+
 /**
  * Process an image file with OCR
  */
@@ -41,20 +64,18 @@ export async function processImage(
 ): Promise<OCRResult> {
   const base64 = await fileToBase64(file);
 
-  const { data, error } = await supabase.functions.invoke("ocr-process", {
-    body: {
-      imageBase64: base64,
-      fileName: file.name,
-      fileType: file.type,
-      mode,
-    },
+  const { data, error } = await invokeOcrProcess({
+    imageBase64: base64,
+    fileName: file.name,
+    fileType: file.type,
+    mode,
   });
 
   if (error) {
     throw new Error(error.message || "OCR processing failed");
   }
 
-  if (data.error) {
+  if (data?.error) {
     throw new Error(data.error);
   }
 
@@ -73,20 +94,18 @@ export async function processPDF(
   // In production, you'd use pdf.js to extract each page
   const base64 = await fileToBase64(file);
 
-  const { data, error } = await supabase.functions.invoke("ocr-process", {
-    body: {
-      imageBase64: base64,
-      fileName: file.name,
-      fileType: file.type,
-      mode,
-    },
+  const { data, error } = await invokeOcrProcess({
+    imageBase64: base64,
+    fileName: file.name,
+    fileType: file.type,
+    mode,
   });
 
   if (error) {
     throw new Error(error.message || "PDF OCR processing failed");
   }
 
-  if (data.error) {
+  if (data?.error) {
     throw new Error(data.error);
   }
 
@@ -115,7 +134,7 @@ export function isLikelyHandwritten(fileName: string): boolean {
     "diary",
     "journal",
   ];
-  
+
   const lowerName = fileName.toLowerCase();
   return handwritingKeywords.some((keyword) => lowerName.includes(keyword));
 }
@@ -140,3 +159,4 @@ export async function processDocument(
 
   throw new Error(`Unsupported file type: ${file.type}`);
 }
+
