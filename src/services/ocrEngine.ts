@@ -41,14 +41,26 @@ type OcrProcessBody = {
 
 async function invokeOcrProcess(body: OcrProcessBody) {
   // Ensure user is authenticated before invoking the edge function
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
     throw new Error("You must be logged in to use OCR processing");
   }
 
-  // The Supabase client automatically includes the user's session token
+  // IMPORTANT:
+  // Some backend deployments reject ES256 user JWTs at the gateway level.
+  // To avoid that, we call the function using the project's publishable key
+  // (a valid JWT for the gateway), and pass the user's access token in the body.
   return supabase.functions.invoke("ocr-process", {
-    body,
+    body: {
+      ...body,
+      userAccessToken: session.access_token,
+    },
+    headers: {
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+    },
   });
 }
 
