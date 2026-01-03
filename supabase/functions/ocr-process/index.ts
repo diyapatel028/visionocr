@@ -66,10 +66,37 @@ serve(async (req) => {
     const { imageBase64, fileName, fileType, mode = "mixed" }: OCRRequest = await req.json();
 
     if (!imageBase64) {
-      throw new Error("No image data provided");
+      return new Response(
+        JSON.stringify({ error: "No image data provided" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log(`Processing OCR for file: ${fileName}, type: ${fileType}, mode: ${mode}`);
+    // Validate file size (max 10MB)
+    const MAX_SIZE_MB = 10;
+    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+    // Base64 is approximately 33% larger than binary
+    const estimatedSize = (imageBase64.length * 3) / 4;
+    
+    if (estimatedSize > MAX_SIZE_BYTES) {
+      console.error(`File too large: ${(estimatedSize / 1024 / 1024).toFixed(2)}MB`);
+      return new Response(
+        JSON.stringify({ error: `File too large. Maximum size is ${MAX_SIZE_MB}MB` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate file type
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif", "application/pdf"];
+    if (fileType && !allowedTypes.includes(fileType.toLowerCase())) {
+      console.error(`Invalid file type: ${fileType}`);
+      return new Response(
+        JSON.stringify({ error: "Invalid file type. Allowed: PNG, JPEG, WebP, GIF, PDF" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Processing OCR for file: ${fileName}, type: ${fileType}, mode: ${mode}, size: ${(estimatedSize / 1024).toFixed(1)}KB`);
 
     // Build the prompt based on OCR mode
     let systemPrompt = "";
