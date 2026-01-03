@@ -40,18 +40,15 @@ type OcrProcessBody = {
 };
 
 async function invokeOcrProcess(body: OcrProcessBody) {
-  // NOTE: Some environments validate Edge Function JWTs differently from Auth access tokens.
-  // Using the project's publishable JWT ensures the request passes function JWT verification.
-  const publishableJwt = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!publishableJwt) {
-    throw new Error("Missing VITE_SUPABASE_PUBLISHABLE_KEY");
+  // Ensure user is authenticated before invoking the edge function
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error("You must be logged in to use OCR processing");
   }
 
+  // The Supabase client automatically includes the user's session token
   return supabase.functions.invoke("ocr-process", {
     body,
-    headers: {
-      Authorization: `Bearer ${publishableJwt}`,
-    },
   });
 }
 
