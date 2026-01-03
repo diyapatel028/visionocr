@@ -11,6 +11,7 @@ interface OCRRequest {
   fileName: string;
   fileType: string;
   mode: "printed" | "handwriting" | "mixed";
+  userAccessToken?: string;
 }
 
 interface OCRResponse {
@@ -30,30 +31,36 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
+    const payload = (await req.json()) as OCRRequest;
+
     // Validate user authentication
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      console.error("Missing authorization header");
-      return new Response(
-        JSON.stringify({ error: "Authentication required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Note: we expect the client to pass the user's access token in the body.
+    // This avoids gateway-level JWT validation issues with ES256 tokens.
+    const userAccessToken = payload.userAccessToken;
+    if (!userAccessToken) {
+      console.error("Missing userAccessToken");
+      return new Response(JSON.stringify({ error: "Authentication required" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const supabaseClient = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAdmin.auth.getUser(userAccessToken);
+
     if (authError || !user) {
       console.error("Authentication failed:", authError?.message);
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`OCR request from authenticated user: ${user.id}`);
@@ -63,7 +70,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { imageBase64, fileName, fileType, mode = "mixed" }: OCRRequest = await req.json();
+    const { imageBase64, fileName, fileType, mode = "mixed" } = payload;
 
     if (!imageBase64) {
       return new Response(
