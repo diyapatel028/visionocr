@@ -49,19 +49,31 @@ async function invokeOcrProcess(body: OcrProcessBody) {
     throw new Error("You must be logged in to use OCR processing");
   }
 
-  // IMPORTANT:
-  // Some backend deployments reject ES256 user JWTs at the gateway level.
-  // To avoid that, we call the function using the project's publishable key
-  // (a valid JWT for the gateway), and pass the user's access token in the body.
-  return supabase.functions.invoke("ocr-process", {
-    body: {
+  // Use direct fetch to bypass Supabase client's JWT handling.
+  // Pass user's access token in the body for server-side validation.
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/ocr-process`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${anonKey}`,
+      apikey: anonKey,
+    },
+    body: JSON.stringify({
       ...body,
       userAccessToken: session.access_token,
-    },
-    headers: {
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
+    }),
   });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    return { data: null, error: new Error(data.error || `HTTP ${response.status}`) };
+  }
+
+  return { data, error: null };
 }
 
 /**
