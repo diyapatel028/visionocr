@@ -1,6 +1,8 @@
-# Welcome to your Lovable project
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/91cea4ec-997c-4aa3-b04c-58575f3082cd" /># Welcome to your Lovable project
 
 ## Project info
+
+**Published URL**: https://visionocr.lovable.app/ 
 
 **URL**: https://lovable.dev/projects/06e35a4f-9f65-41f5-8311-565e1a134d37?magic_link=mc_c461cb4a-b77a-4bd5-8143-ada8b638f1b6
 
