@@ -49,10 +49,10 @@ async function invokeOcrProcess(body: OcrProcessBody) {
     throw new Error("You must be logged in to use OCR processing");
   }
 
-  // Use direct fetch to bypass Supabase client's JWT handling.
-  // Pass user's access token in the body for server-side validation.
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  // Use supabase client URL directly - this is the reliable way that works in production
+  // The supabase client already has the correct URL configured
+  const supabaseUrl = "https://pjrkblynvejgmouzxkln.supabase.co";
+  const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBqcmtibHludmVqZ21vdXp4a2xuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcxOTg0NjQsImV4cCI6MjA4Mjc3NDQ2NH0.rc4YzR7xApfxL2c8tWXFih53gE2X0uRLgs5SdrL0OUw";
 
   const response = await fetch(`${supabaseUrl}/functions/v1/ocr-process`, {
     method: "POST",
