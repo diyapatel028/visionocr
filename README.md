@@ -2,9 +2,7 @@
 
 ## Project info
 
-**Published URL**: https://visionocr.lovable.app/ 
-
-**URL**: https://lovable.dev/projects/06e35a4f-9f65-41f5-8311-565e1a134d37?magic_link=mc_c461cb4a-b77a-4bd5-8143-ada8b638f1b6
+**URL**:  https://visionocr.lovable.app/ 
 
 ## How can I edit this code?
 
