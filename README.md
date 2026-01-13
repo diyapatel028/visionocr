@@ -4,10 +4,7 @@
 
 **URL**:  https://visionocr.lovable.app/ 
 
-Got it 👍
-Below is a **clean, GitHub-ready `README.md`** for your **VisionOCR** project, written **strictly in the structure you asked for** and suitable for portfolios, recruiters, and open-source use.
 
-You can **directly copy–paste** this into your GitHub repo.
 
 ---
 
