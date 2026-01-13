@@ -4,70 +4,221 @@
 
 **URL**:  https://visionocr.lovable.app/ 
 
-## How can I edit this code?
+Got it 👍
+Below is a **clean, GitHub-ready `README.md`** for your **VisionOCR** project, written **strictly in the structure you asked for** and suitable for portfolios, recruiters, and open-source use.
 
-There are several ways of editing your application.
+You can **directly copy–paste** this into your GitHub repo.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+# 🔍 VisionOCR
 
-Changes made via Lovable will be committed automatically to this repo.
+**VisionOCR** is a modern **AI-powered Optical Character Recognition (OCR) web application** that extracts text from images with high accuracy.
+It provides a clean UI, secure backend APIs, and seamless frontend–backend integration for real-world OCR use cases such as document scanning, notes digitization, and image-to-text conversion.
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🌊 Features
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+* 📸 **Image-based OCR**
 
-Follow these steps:
+  * Upload images and extract readable text
+  * Supports printed and semi-structured text
+* 🧠 **AI-Powered Text Extraction**
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+  * Uses OCR engine for accurate recognition
+* 🔐 **User Authentication System**
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+  * Secure login & registration
+  * Token-based authentication
+* 📂 **History Management**
 
-# Step 3: Install the necessary dependencies.
-npm i
+  * Store and view previously scanned documents
+* 🌐 **Web-based Interface**
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+  * Clean, modern, responsive UI
+* ⚡ **Fast API Responses**
+
+  * Optimized backend for quick processing
+
+---
+
+## 🚀 Setup & Installation
+
+### 1️⃣ Clone the Repository
+
+```bash
+git clone https://github.com/diyapatel028/Visionocr.git
+cd Visionocr
 ```
 
-**Edit a file directly in GitHub**
+### 2️⃣ Install Backend Dependencies
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+pip install -r requirements.txt
+```
 
-**Use GitHub Codespaces**
+### 3️⃣ Run the Backend Server
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```bash
+python run.py
+```
 
-## What technologies are used for this project?
+### 4️⃣ Open in Browser
 
-This project is built with:
+```
+http://localhost:8000
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## 📁 Project Structure
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+```
+visionocr/
+├── run.py                   # Application entry point
+├── requirements.txt         # Backend dependencies
+├── app/
+│   ├── main.py              # FastAPI initialization
+│   ├── core/                # App configuration & security
+│   ├── auth/                # Authentication logic
+│   ├── api/                 # API routes
+│   │   └── v1/
+│   │       ├── auth.py      # Auth endpoints
+│   │       ├── ocr.py       # OCR processing routes
+│   │       └── users.py    # User management
+│   ├── database/            # Database models & schemas
+│   └── services/            # OCR engine logic
+├── templates/               # HTML templates
+├── static/                  # CSS, JS, assets
+└── visionocr.db             # SQLite database
+```
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 🌐 Pages & Authentication Flow
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 🌍 Public Pages
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+* **Home** (`/`) – App overview
+* **Login** (`/login`) – User authentication
+* **Register** (`/register`) – Create new account
+
+### 🔒 Protected Pages (Login Required)
+
+* **Dashboard** (`/dashboard`) – Upload & process images
+* **History** (`/history`) – View OCR results
+* **Profile** (`/profile`) – Manage account details
+
+### 🔐 Authentication Flow
+
+1. User registers or logs in
+2. Backend issues JWT token
+3. Token stored on client
+4. Protected routes require valid token
+
+---
+
+## 📚 API Documentation
+
+Interactive API documentation is available at:
+
+* **Swagger UI**
+
+```
+http://localhost:8000/docs
+```
+
+* **ReDoc**
+
+```
+http://localhost:8000/redoc
+```
+
+---
+
+## 🔌 API Endpoints Overview
+
+### 🔐 Authentication (`/api/v1/auth`)
+
+* `POST /register` – Create new user
+* `POST /login` – Authenticate user
+* `GET /me` – Get logged-in user info
+
+---
+
+### 📸 OCR (`/api/v1/ocr`)
+
+* `POST /upload` – Upload image for OCR
+* `POST /extract` – Extract text from image
+* `GET /history` – Get OCR history
+
+---
+
+### 👤 Users (`/api/v1/users`)
+
+* `GET /profile` – User profile
+* `PUT /profile` – Update profile
+* `DELETE /account` – Delete user account
+
+---
+
+## 🔧 Key Technical Highlights
+
+### 🧠 OCR Engine
+
+* Image preprocessing for better accuracy
+* Text extraction using OCR libraries
+* Supports multiple image formats
+
+### 🔐 Security
+
+* JWT authentication
+* Password hashing
+* Protected API routes
+* Input validation
+
+### 🗄️ Database
+
+* SQLite for lightweight storage
+* Stores users & OCR results
+* Automatic database initialization
+
+### 🎨 Frontend
+
+* Modern UI (HTML, CSS, JS)
+* Responsive design
+* Async API calls
+* Error handling & validation
+
+---
+
+## 🎯 User Journey
+
+1. User registers or logs in
+2. Uploads an image
+3. OCR engine extracts text
+4. Result is displayed instantly
+5. OCR data is saved to history
+6. User can download or reuse extracted text
+
+---
+
+
+* The SQLite database is created automatically on first run
+* This project is suitable for:
+
+  * OCR-based products
+  * PDF OCR support
+  * Resume & portfolio projects
+  * AI + Web application demos
+    
+* Future improvements:
+
+  * Multi-language recognition
+  * Export results as TXT / DOCX / PDF
+
+
+
+Just tell me 🔥
+
